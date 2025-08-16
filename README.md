@@ -62,6 +62,7 @@ python src/main.py \
 ```
 
 ## Repository Structure
+```bash
 .
 ├── src/                # Source code (generation, ingestion, preprocessing, modelling, evaluation)
 ├── data/
@@ -73,7 +74,7 @@ python src/main.py \
 ├── README.md
 ├── requirements.txt
 └── .gitignore
-
+```
 ## Outputs
 
 - ROC curves & evaluation plots → results/figures/
