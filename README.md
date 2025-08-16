@@ -1,4 +1,4 @@
-Health Insurance Big Data Pipeline
+# Health Insurance Big Data Pipeline
 
 This repository contains the implementation for COMP SCI 7319OL — Milestone 1A, focusing on building a big data pipeline for health insurance analytics. The project demonstrates dataset integration, preprocessing, and predictive modeling for various use cases in the insurance domain.
 
