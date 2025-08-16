@@ -1,12 +1,12 @@
-
 from dataclasses import dataclass
 
 @dataclass
 class Paths:
     customers_path: str
     claims_path: str
-    marketplace_path: str
-    complaints_path: str
+    marketplace_path: str | None = None
+    complaints_path: str | None = None
+    renewals_path: str | None = "data/raw/renewals_loyalty.csv"
     output_dir: str = "results"
 
 @dataclass
@@ -16,13 +16,6 @@ class SplitConfig:
 
 @dataclass
 class Columns:
-    # Minimal schema expected after merge
-    target: str = "claim_outcome"  # values: Approved/Rejected (convert to 1/0)
-    numeric: tuple = ("Age", "Claim_Amount", "Loyalty_Points", "Previous_Claims")
-    categorical: tuple = ("Gender", "Policy_Status", "Disease_Name", "Region")
-
-@dataclass
-class ModelNames:
-    lr: str = "LogisticRegression"
-    rf: str = "RandomForest"
-    xgb: str = "XGBoost"
+    target: str = "claim_outcome"
+    numeric: tuple = ("Age", "Claim_Amount", "Loyalty_Points", "Previous_Claims", "Tenure_Years")
+    categorical: tuple = ("Gender", "Policy_Status", "Disease_Name", "Region", "Renewal_Status")
