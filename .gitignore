@@ -1,17 +1,7 @@
-# Python
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
 .venv/
-venv/
-.env
-
-# Data & results
-data/
-!data/.gitkeep
-results/*.csv
-results/*.json
-
-# Notebooks checkpoints
+__pycache__/
 .ipynb_checkpoints/
+data/raw/*
+data/processed/*
+results/*
+!results/.keep

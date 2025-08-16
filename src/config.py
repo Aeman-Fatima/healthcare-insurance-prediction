@@ -19,3 +19,8 @@ class Columns:
     target: str = "claim_outcome"
     numeric: tuple = ("Age", "Claim_Amount", "Loyalty_Points", "Previous_Claims", "Tenure_Years")
     categorical: tuple = ("Gender", "Policy_Status", "Disease_Name", "Region", "Renewal_Status")
+    numeric: tuple = (
+    "Age","Claim_Amount","Loyalty_Points","Previous_Claims","Tenure_Years",
+    "cfpb_complaints_total","cfpb_pct_disputed","cfpb_pct_timely","cfpb_complaints_recent"
+    )
+

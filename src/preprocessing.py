@@ -6,6 +6,17 @@ from sklearn.preprocessing import OneHotEncoder, StandardScaler
 from config import SplitConfig, Columns
 import numpy as np
 
+from pathlib import Path
+
+STATE_TO_REGION = {
+    "CA":"West","WA":"West","OR":"West","NV":"West","AZ":"West","UT":"West","CO":"West","NM":"West","ID":"West","MT":"West","WY":"West","AK":"West","HI":"West",
+    "TX":"South","FL":"South","GA":"South","NC":"South","VA":"South","SC":"South","AL":"South","MS":"South","TN":"South","KY":"South","OK":"South","AR":"South","LA":"South","WV":"South","MD":"South","DC":"South","DE":"South",
+    "NY":"East","NJ":"East","MA":"East","PA":"East","CT":"East","RI":"East","NH":"East","VT":"East","ME":"East",
+    "IL":"North","MI":"North","OH":"North","MN":"North","WI":"North","IN":"North","IA":"North","MO":"North","ND":"North","SD":"North","NE":"North","KS":"North",
+    "NA":"Unknown"
+}
+
+
 def load_and_merge(customers_path: str,
                    claims_path: str,
                    marketplace_path: str = None,
@@ -16,6 +27,33 @@ def load_and_merge(customers_path: str,
 
     # Basic join: claims ↔ customers
     df = claims.merge(customers, how="left", on="SUB_ID")
+
+    # Join CFPB complaints aggregate by Region (if file exists)
+    comp_agg_path = Path("data/processed/complaints_agg_by_state.csv")
+    if comp_agg_path.exists():
+        comp = pd.read_csv(comp_agg_path)
+        # expected cols: state, complaints_total, pct_disputed, pct_timely, complaints_recent
+        comp.columns = [c.strip().lower() for c in comp.columns]
+        if "state" in comp.columns:
+            comp["region_from_state"] = comp["state"].str.upper().map(STATE_TO_REGION).fillna("Unknown")
+            comp_reg = comp.groupby("region_from_state", dropna=False).agg(
+                cfpb_complaints_total=("complaints_total","mean"),
+                cfpb_pct_disputed=("pct_disputed","mean"),
+                cfpb_pct_timely=("pct_timely","mean"),
+                cfpb_complaints_recent=("complaints_recent","mean"),
+            ).reset_index().rename(columns={"region_from_state":"Region"})
+            if "Region" in df.columns:
+                df = df.merge(comp_reg, on="Region", how="left")
+            else:
+                # if customers have State not Region, map it
+                if "State" in df.columns:
+                    df["Region"] = df["State"].str.upper().map(STATE_TO_REGION).fillna("Unknown")
+                    df = df.merge(comp_reg, on="Region", how="left")
+                else:
+                    print("[WARN] No Region/State in customers to join complaints aggregate")
+    else:
+        print("[INFO] complaints aggregate not found at data/processed/complaints_agg_by_state.csv")
+
 
     # Optional: join synthetic renewals/loyalty by SUB_ID
     if renewals_path:

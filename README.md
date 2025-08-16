@@ -80,7 +80,7 @@ python src/main.py \
 - ROC curves & evaluation plots → results/figures/
 - Model performance comparison table → results/tables/model_comparison.csv
 
-🚧 Notes & Limitations
+## Notes & Limitations
 
 - Large raw datasets are not stored due to size limits. Simulated equivalents are generated to reproduce the workflow.
 - Complaints data is optional. If not available, the pipeline falls back on purely simulated inputs.
