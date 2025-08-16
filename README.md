@@ -1,109 +1,58 @@
-# Health Insurance Big Data Pipeline – Predictive Modeling
+### Aeman-Fatima (a1946845)
 
-## Overview
-This project explores predictive modeling in the health insurance domain, focusing on customer behavior, policy renewal, and market trends. Using a mix of public and simulated datasets, the pipeline demonstrates how machine learning can be applied to:
+# Healthcare Insurance Big Data Pipeline
 
-- Predict customer churn and policy renewals
-- Analyze complaint data to identify key service issues
-- Understand policy pricing and adoption trends
-- Generate performance metrics and visualizations for evaluation
+## Project Overview
 
-The work follows the scope of the COMP SCI 7319OL project (Milestone 1A–D), combining both research and practical implementation.
+This project builds a big data pipeline for analyzing health insurance datasets. The pipeline simulates customer, claims, and loyalty data while optionally integrating real-world complaint aggregates from the CFPB (Consumer Financial Protection Bureau) dataset.
+
+The pipeline demonstrates:
+
+- Data generation and ingestion
+- Preprocessing and feature engineering
+- Model training & evaluation (XGBoost, Random Forest, Logistic Regression, etc.)
+- Output of metrics, visualizations, and comparisons
 
 ## Datasets
-The project uses four datasets:
+1. Simulated Datasets (Core)
 
-1) Health Insurance Customer Dataset (COIL 2000 – UCI Repository)
-  - COIL 2000 Dataset
-  - Contains demographic and insurance-related variables for customer churn modeling.
-2) Health Insurance Marketplace Dataset (Kaggle – HHS, 2023)
-  - Kaggle: Health Insurance Marketplace Data
-  - Provides insurance plan and pricing information for marketplace analysis.
-3) Health Insurance Reviews and Complaints Dataset (CFPB, 2024)
-  - Consumer Financial Protection Bureau Complaints
-  - Includes structured complaints data relevant to service quality and regulatory insights.
-4) Policy Renewal and Loyalty Dataset (Simulated)
-  - Since real-world renewal/loyalty datasets are not publicly available due to privacy concerns, a simulated dataset was created.
-  - It mirrors realistic patterns of customer loyalty, retention, and policy renewal.
-  - This ensures the pipeline covers end-to-end use cases while maintaining data integrity.
+Since many large datasets cannot be uploaded to this repository, simulated data is generated to ensure reproducibility:
 
-## Methods
-- Data preprocessing and cleaning (handling missing values, encoding, normalization)
-- Feature engineering for customer behavior and insurance attributes
-- Model development: Logistic Regression, Random Forests, Gradient Boosting, XGBoost
-- Evaluation metrics: Accuracy, Precision, Recall, ROC-AUC
-- Visualization: Confusion matrices, ROC curves, feature importance plots
+- Customer Dataset → generated from UCI COIL 2000 structure (customer demographics & attributes)
+- Claims Dataset → synthetic claims history with policy codes, claim status, claim type
+- Renewals & Loyalty Dataset → simulated renewal/loyalty data for policyholders
 
-## Results
+These generators produce data that mirrors real-world structures and are the default for running the pipeline.
 
-The pipeline outputs include:
-- Predictive performance metrics (classification reports)
-- ROC-AUC curves for model comparison
-- Insights into policyholder behavior and complaint trends
-- Demonstration of how simulated loyalty data complements public datasets
+2. Optional Real-World Aggregate (Enhancement)
 
-Notes
-- This project is academic in nature and not intended for production deployment.
-- All datasets are publicly available except the simulated loyalty dataset.
-- The simulated dataset was designed to resemble realistic customer features for the purposes of model evaluation and pipeline completeness.
+- Complaints Dataset (CFPB, 2024) – Public consumer complaints about financial/insurance companies.
+  - Due to its large size, the raw file is not stored here.
+  - Instead, a lightweight pre-aggregated file (complaints_agg_by_state.csv) can be included under data/processed/ for reproducibility.
+  - If not present, the pipeline still runs using only simulated datasets.
 
-
-# How to Run
-
-1) Set up the environment
+## How to Run
+1. Setup Environment
 ```
 python -m venv .venv
-# macOS/Linux
-source .venv/bin/activate
-# Windows
-# .venv\Scripts\activate
-
-pip install --upgrade pip
+source .venv/bin/activate   # On Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 ```
-
-Tip: Pin versions in requirements.txt to avoid TA env issues (e.g., scikit-learn==1.4.2, xgboost==2.0.3, pandas==2.2.2, matplotlib==3.8.4, numpy==1.26.4).
-
-2) Generate synthetic datasets (reproducible)
+2. Generate Data
 ```
-# Customers (demographics/policy)
-python src/generate_customers.py \
-  --n_customers 8000 \
-  --seed 123 \
-  --out data/raw/coil2000_customers.csv
-
-# Claims (with disease, amount, outcome)
-python src/generate_claims.py \
-  --n_claims 10000 \
-  --n_customers 8000 \
-  --seed 456 \
-  --out data/raw/claims.csv
-
-# Renewals/Loyalty (simulated)
-python src/generate_loyalty.py \
-  --n_customers 8000 \
-  --seed 42 \
-  --out data/raw/renewals_loyalty.csv
+# Generate synthetic datasets
+python src/generate_customers.py --out data/raw/coil2000_customers.csv
+python src/generate_claims.py --out data/raw/claims.csv
+python src/generate_loyalty.py --out data/raw/renewals_loyalty.csv
 ```
 
-We do not commit these CSVs. They’re generated locally to keep the repo lightweight and academically transparent.
-
-3) (Optional) Place public datasets
-
-If you want to run with public data locally, download and place the CSVs here (or update paths accordingly):
+(Optional: Preprocess real complaints dataset if available)
 
 ```
-data/raw/
-  coil2000_customers.csv           # or real COIL 2000 export
-  claims.csv                       # your own claims file, if available
-  renewals_loyalty.csv             # from the generator script above
-  cfpb_complaints_sample.csv       # optional small sample for testing
-  hhs_marketplace.csv              # optional
+python src/ingest_complaints.py --in data/raw/complaints.csv \
+                                --out data/processed/complaints_agg_by_state.csv
 ```
-
-The pipeline does not require marketplace/complaints to run. They’re documented as optional integrations.
-
-4) Run the pipeline
+3. Run Pipeline
 ```
 python src/main.py \
   --customers_path data/raw/coil2000_customers.csv \
@@ -112,28 +61,28 @@ python src/main.py \
   --output_dir results
 ```
 
-Optional args if you have the files:
-```
-  --marketplace_path data/raw/hhs_marketplace.csv \
-  --complaints_path data/raw/cfpb_complaints_sample.csv
-```
+## Repository Structure
+.
+├── src/                # Source code (generation, ingestion, preprocessing, modelling, evaluation)
+├── data/
+│   ├── raw/            # Input datasets (simulated or ingested)
+│   └── processed/      # Aggregated/cleaned datasets
+├── results/
+│   ├── figures/        # ROC curves, model plots
+│   └── tables/         # Comparison tables (CSV)
+├── README.md
+├── requirements.txt
+└── .gitignore
 
-5) Outputs you should see
-```
-results/
-  figures/
-    LogisticRegression_roc.png
-    LogisticRegression_confusion.png
-    RandomForest_roc.png
-    RandomForest_confusion.png
-    XGBoost_roc.png
-    XGBoost_confusion.png
-  tables/
-    model_comparison.csv   # Accuracy, F1, ROC-AUC (sorted)
-```
+## Outputs
 
-7) Reproducibility notes
+- ROC curves & evaluation plots → results/figures/
+- Model performance comparison table → results/tables/model_comparison.csv
 
-The policy renewals & loyalty dataset is simulated via src/generate_loyalty.py, as real-world equivalents are not publicly available.
-Public datasets (UCI COIL 2000, Kaggle HHS Marketplace, CFPB Complaints) are linked in this README and can be used locally. Due to size, they are not shipped in the repo.
-Results may differ slightly from prior milestones because this repository focuses on transparent, reproducible generation and processing while preserving the methodology.
+🚧 Notes & Limitations
+
+- Large raw datasets are not stored due to size limits. Simulated equivalents are generated to reproduce the workflow.
+- Complaints data is optional. If not available, the pipeline falls back on purely simulated inputs.
+- Results may vary slightly depending on seed/random splits.
+- This project is for academic purposes only and does not represent production insurance analytics.
+
