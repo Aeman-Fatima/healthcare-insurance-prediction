@@ -1,0 +1,17 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+venv/
+.env
+
+# Data & results
+data/
+!data/.gitkeep
+results/*.csv
+results/*.json
+
+# Notebooks checkpoints
+.ipynb_checkpoints/
