@@ -1,87 +1,31 @@
-# src/generate_loyalty.py
-"""
-Generate a synthetic renewals/loyalty dataset to join with claims/customers.
-This avoids bundling private CSVs while keeping your pipeline reproducible.
-
-Output schema (CSV):
-- SUB_ID (int): subscriber/customer id for joining
-- Tenure_Years (float): years since first policy
-- Loyalty_Points (int): reward points (roughly tenure * engagement factor)
-- Previous_Claims (int): number of past claims
-- Renewal_Status (str): 'Renewed'/'Not_Renewed' (optional, for retention analysis)
-
-Usage:
-  python src/generate_loyalty.py \
-    --n_customers 8000 \
-    --seed 42 \
-    --out data/raw/renewals_loyalty.csv
-"""
-
-import argparse
-import numpy as np
-import pandas as pd
-from pathlib import Path
-
-def clipped_normal(mean, sd, size, low=None, high=None):
-    x = np.random.normal(mean, sd, size)
-    if low is not None:  x = np.maximum(x, low)
-    if high is not None: x = np.minimum(x, high)
-    return x
+import argparse, numpy as np, pandas as pd
+from src.paths import RAW_DIR, ensure_dir
 
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--n_customers", type=int, default=8000)
     ap.add_argument("--seed", type=int, default=42)
-    ap.add_argument("--out", type=str, default="data/raw/renewals_loyalty.csv")
+    ap.add_argument("--out", default=str(RAW_DIR / "renewals_loyalty.csv"))
     args = ap.parse_args()
 
     rng = np.random.default_rng(args.seed)
-    n = args.n_customers
-
-    # SUB_ID to join with your customers/claims tables
-    sub_ids = np.arange(1, n + 1)
-
-    # Tenure ~ skewed to lower years but with a tail (0-15 years)
-    tenure_years = clipped_normal(mean=4.0, sd=3.0, size=n, low=0.0, high=15.0)
-
-    # Engagement factor to introduce heterogeneity in loyalty
-    engagement = rng.beta(a=2.0, b=3.0, size=n)  # 0..1
-
-    # Loyalty_Points ~ tenure * engagement with noise; clamp to [0, 10_000]
-    loyalty_points = (tenure_years * (200 + 800 * engagement) +
-                      rng.normal(0, 100, n))
-    loyalty_points = np.clip(loyalty_points, 0, 10_000).astype(int)
-
-    # Previous_Claims: zero-inflated Poisson-like
-    zero_mask = rng.random(n) < 0.55
-    base_lambda = 0.8 + 1.2 * engagement + 0.05 * tenure_years
-    prev_claims = rng.poisson(lam=np.maximum(base_lambda, 0.05))
+    sub_ids = np.arange(1, args.n_customers + 1)
+    tenure = np.clip(rng.normal(4.0, 3.0, args.n_customers), 0.0, 15.0)
+    engagement = rng.beta(2.0, 3.0, args.n_customers)
+    loyalty = np.clip(tenure * (200 + 800*engagement) + rng.normal(0,100,args.n_customers), 0, 10000).astype(int)
+    base_lambda = np.maximum(0.8 + 1.2*engagement + 0.05*tenure, 0.05)
+    prev_claims = np.clip(rng.poisson(base_lambda), 0, 12)
+    zero_mask = rng.random(args.n_customers) < 0.55
     prev_claims[zero_mask] = 0
-    prev_claims = np.clip(prev_claims, 0, 12)
+    logit = -0.8 + 0.18*tenure + 0.00015*loyalty - 0.25*prev_claims
+    p_renew = 1/(1+np.exp(-logit))
+    renewal = (rng.random(args.n_customers) < p_renew)
+    status = np.where(renewal, "Renewed", "Not_Renewed")
 
-    # Renewal probability rises with tenure & loyalty, falls with many past claims
-    logit = (
-        -0.8                                # base
-        + 0.18 * tenure_years               # more tenure -> more likely to renew
-        + 0.00015 * loyalty_points          # more loyalty -> more likely
-        - 0.25 * prev_claims                # many claims -> less likely
-    )
-    p_renew = 1 / (1 + np.exp(-logit))
-    renewal = (rng.random(n) < p_renew)
-    renewal_status = np.where(renewal, "Renewed", "Not_Renewed")
-
-    df = pd.DataFrame({
-        "SUB_ID": sub_ids,
-        "Tenure_Years": np.round(tenure_years, 2),
-        "Loyalty_Points": loyalty_points,
-        "Previous_Claims": prev_claims,
-        "Renewal_Status": renewal_status
-    })
-
-    out_path = Path(args.out)
-    out_path.parent.mkdir(parents=True, exist_ok=True)
-    df.to_csv(out_path, index=False)
-    print(f"[OK] Wrote {len(df):,} rows → {out_path}")
+    df = pd.DataFrame({"SUB_ID": sub_ids,"Tenure_Years": tenure.round(2),
+                       "Loyalty_Points": loyalty,"Previous_Claims": prev_claims,"Renewal_Status": status})
+    ensure_dir(RAW_DIR); df.to_csv(args.out, index=False)
+    print(f"[OK] renewals/loyalty → {args.out} ({len(df)})")
 
 if __name__ == "__main__":
     main()
